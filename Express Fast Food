@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title> Express Fast Food</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+<style>
+  /*
+  ==============================================
+  ROOT VARIABLES & THEME SETUP
+  ==============================================
+  */
+  :root{
+    --primary: #4f46e5;
+    --accent: #7c3aed;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+
+    /* Light Theme (Default) */
+    --bg-primary: #f4f4f6;
+    --bg-secondary: #ffffff;
+    --text-primary: #111827;
+    --text-secondary: #374151;
+    --text-muted: #6b7280;
+    --border-color: rgba(0,0,0,0.08);
+    --shadow-color-light: rgba(79,70,229,0.12);
+    --shadow-color-dark: rgba(2,6,23,0.08);
+    --gradient-primary: linear-gradient(90deg, var(--primary), var(--accent));
+  }
+
+  /* Dark Theme */
+  .dark-theme {
+    --bg-primary: #111827;
+    --bg-secondary: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-muted: #9ca3af;
+    --border-color: rgba(255,255,255,0.1);
+    --shadow-color-light: rgba(79,70,229,0.25);
+    --shadow-color-dark: rgba(0,0,0,0.25);
+  }
+
+  /*
+  ==============================================
+  GENERAL STYLES
+  ==============================================
+  */
+  *{
+    box-sizing:border-box;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+  }
+  
+  body{
+    margin:0;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+  }
+
+  main{
+    padding: 14px;
+    padding-bottom: 110px;
+  }
+
+  /*
+  ==============================================
+  HEADER & FOOTER
+  ==============================================
+  */
+  header{
+    background: var(--gradient-primary);
+    color:#fff;
+    padding: 10px 16px;
+    font-weight:700;
+    position:sticky;
+    top:0;
+    z-index:100;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-title {
+    font-size: 1.2rem;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .header-btn {
+    background: rgba(255,255,255,0.2);
+    border: none;
+    color: white;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 1.2rem;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .cart-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    background: var(--danger);
+    color: white;
+    font-size: 0.7rem;
+    font-weight: 700;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--primary);
+  }
+  
+  footer {
+    background: var(--bg-secondary);
+    color: var(--text-secondary);
+    padding: 24px 16px;
+    margin-top: 30px;
+    border-top: 1px solid var(--border-color);
+    text-align: center;
+  }
+
+  /*
+  ==============================================
+  UI COMPONENTS
+  ==============================================
+  */
+  .btn{
+    display:inline-block;
+    padding: 10px 16px;
+    border-radius:10px;
+    border:none;
+    cursor:pointer;
+    font-weight:600;
+    font-size: 0.95rem;
+    text-align: center;
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .btn-primary{ background:var(--primary); color:#fff; }
+  .btn-outline{ background:transparent; border:1px solid var(--primary); color:var(--primary); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  
+  /*
+  ==============================================
+  LAYOUT & CONTAINERS
+  ==============================================
+  */
+  .controls{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  .search{flex:1;display:flex;gap:8px;align-items:center;background:var(--bg-secondary);padding:8px;border-radius:10px;border:1px solid var(--border-color);}
+  .search input{border:0;outline:none;width:100%; background: transparent; color: var(--text-primary);}
+  .category-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px; overflow-x: auto; padding-bottom: 8px;}
+  .cat-btn{padding:8px 12px;border-radius:999px;border:none;cursor:pointer;background:transparent;font-weight:700;color:var(--primary); white-space: nowrap;}
+  .cat-btn.active{background:var(--gradient-primary);color:#fff;box-shadow:0 6px 18px var(--shadow-color-light)}
+  .cat-btn.favorite-btn { color: var(--accent); border: 1px solid var(--accent); }
+  .cat-btn.favorite-btn.active { color: #fff; background: var(--accent); border-color: var(--accent); }
+  
+  /*
+  ==============================================
+  IMAGE SLIDER
+  ==============================================
+  */
+  .slider-container {
+    width: 100%;
+    margin-bottom: 20px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    aspect-ratio: 16 / 8;
+    background: var(--bg-secondary);
+  }
+  .slider-wrapper { display: flex; height: 100%; transition: transform 0.5s ease-in-out; }
+  .slide { min-width: 100%; height: 100%; box-sizing: border-box; position: relative; cursor: pointer; }
+  .slide img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .slide-caption { position: absolute; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, rgba(0,0,0,0.8), transparent); color: white; padding: 24px 12px 12px 12px; font-weight: 700; }
+  .slider-nav { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; z-index: 10; }
+  .slider-nav.prev { left: 10px; }
+  .slider-nav.next { right: 10px; }
+
+
+  /*
+  ==============================================
+  PRODUCT LIST & CARDS
+  ==============================================
+  */
+  .product-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+  .product-card{ background: var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; display:flex; flex-direction: column; position:relative; overflow: hidden; cursor: pointer; }
+  .product-card-image-container { position: relative; }
+  .product-card img{ width: 100%; height: auto; aspect-ratio: 1 / 1; object-fit:cover; }
+  .product-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.2rem; text-align: center; z-index: 4; }
+  .product-info{ padding: 12px; width: 100%; display:flex; flex-direction:column; gap:8px; flex-grow: 1; }
+  .product-name{font-weight:700; font-size: 1.1rem; color: var(--text-primary)}
+  .product-price{color:var(--primary);font-weight:700; font-size: 1.1rem;}
+  .product-meta{font-size:0.9rem;color:var(--text-muted)}
+  .product-card .fav-btn { position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.7); border: none; font-size: 1.4rem; cursor: pointer; color: var(--text-muted); width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; z-index: 5; }
+  .product-card .fav-btn.favorited { color: var(--danger); }
+  .product-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 8px; }
+  .product-actions .btn { flex: 1; }
+  .product-actions .btn-icon { flex: 0 1 50px; }
+  .discount-badge { position: absolute; top: 10px; left: 10px; background: var(--danger); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 700; z-index: 5; }
+  .star-display-card { font-size: 1rem; color: #ffc107; margin-bottom: 4px; }
+  .original-price { font-size: 0.9rem; color: var(--text-muted); margin-left: 8px; text-decoration: line-through; }
+  
+  /* Skeleton Loader */
+  .skeleton { animation: skeleton-loading 1.5s linear infinite alternate; }
+  @keyframes skeleton-loading { 0% { background-color: hsl(200, 20%, 80%); } 100% { background-color: hsl(200, 20%, 95%); } }
+  .dark-theme .skeleton { animation: skeleton-loading-dark 1.5s linear infinite alternate; }
+  @keyframes skeleton-loading-dark { 0% { background-color: hsl(210, 10%, 25%); } 100% { background-color: hsl(210, 10%, 40%); } }
+  .skeleton-card { background: var(--bg-secondary); border:1px solid var(--border-color); border-radius:12px; display:flex; flex-direction: column; }
+  .skeleton-img { width: 100%; aspect-ratio: 1 / 1; }
+  .skeleton-text { padding: 12px; width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  .skeleton-line { height: 20px; border-radius: 4px; }
+  .skeleton-line.short { width: 60%; }
+
+  /*
+  ==============================================
+  MODALS
+  ==============================================
+  */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);display:none;align-items:center;justify-content:center;z-index:200}
+  .modal{width:min(980px,96%);max-height:86vh;overflow:auto;background:var(--bg-secondary);color: var(--text-primary);border-radius:12px;padding:16px;box-shadow:0 24px 48px var(--shadow-color-dark); position:relative; animation: modal-fade-in 0.3s ease-out;}
+  #auth-modal .modal, #profile-modal .modal { width: min(400px, 96%); }
+  @keyframes modal-fade-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  .modal-close-btn { position: absolute; top: 10px; right: 10px; background: var(--bg-primary); border: none; width: 36px; height: 36px; border-radius: 50%; font-size: 1.2rem; cursor: pointer; color: var(--text-secondary); display:flex; align-items:center; justify-content:center; }
+  .product-detail-content { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: flex-start; }
+  .product-detail-image-slider { position: relative; width: 100%; aspect-ratio: 1/1; border-radius: 10px; overflow: hidden; }
+  .product-detail-image-wrapper { display: flex; height: 100%; transition: transform 0.3s ease-in-out; }
+  .product-detail-image-wrapper img { min-width: 100%; height: 100%; object-fit: cover; }
+  .slider-nav-btn { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.4); color: white; border: none; border-radius: 50%; width: 40px; height: 40px; font-size: 1.2rem; cursor: pointer; }
+  .slider-nav-btn.prev { left: 10px; }
+  .slider-nav-btn.next { right: 10px; }
+  @media (max-width: 768px) { .product-detail-content { grid-template-columns: 1fr; } }
+  
+  /* Order Summary Styles */
+  .order-summary-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+  .order-summary-item:last-child { border-bottom: none; }
+  .order-summary-total { font-weight: 700; font-size: 1.2rem; margin-top: 12px; text-align: right; }
+  
+  /*
+  ==============================================
+  BOTTOM NAVIGATION
+  ==============================================
+  */
+  .bottom-nav{position:fixed;left:12px;right:12px;bottom:12px;background:var(--bg-secondary);border-radius:14px;box-shadow:0 10px 30px var(--shadow-color-dark);display:flex;justify-content:space-around;padding:8px;z-index:50}
+  .nav-btn{flex:1;text-align:center;padding:8px 6px;border-radius:10px;font-weight:700;cursor:pointer;border:none;background:transparent; color: var(--text-muted);}
+  .nav-btn.active{background:var(--gradient-primary);color:#fff;box-shadow:0 6px 18px var(--shadow-color-light)}
+  
+  .form-group{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+  .form-group label{font-weight:600;font-size:0.9rem;}
+  .form-group input, .form-group textarea{width:100%;padding:10px;border-radius:8px;border:1px solid var(--border-color);outline-color:var(--primary); background: var(--bg-primary); color: var(--text-primary);}
+  
+  .section-title { margin: 1.5rem 0 1rem 0; font-weight: 800; color: var(--text-secondary); }
+  .empty{padding:20px;text-align:center;color:var(--text-muted)}
+
+  /* Rating Stars & Reviews */
+  .star-rating { display: flex; flex-direction: row-reverse; justify-content: flex-end; margin-bottom: 12px; }
+  .star-rating input[type="radio"] { display: none; }
+  .star-rating label { font-size: 2rem; color: var(--text-muted); cursor: pointer; padding: 0 2px; }
+  .star-rating label:hover, .star-rating label:hover ~ label { color: #ffc107; }
+  .star-rating input[type="radio"]:checked ~ label { color: #ffc107; }
+  .star-display { font-size: 1.2rem; color: #ffc107; }
+  .review-card { background: var(--bg-primary); border-radius: 8px; padding: 12px; margin-bottom: 12px; border: 1px solid var(--border-color); }
+  .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .review-author { font-weight: 600; }
+  .review-image { max-width: 100%; height: auto; border-radius: 8px; margin-top: 8px; }
+
+</style>
+</head>
+<body>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+
+
+<header>
+  <div class="header-left">
+    <button id="backBtn" class="header-btn" aria-label="Go Back" style="display: none;">
+      <i class="fa-solid fa-arrow-left"></i>
+    </button>
+    <div id="headerTitle" class="header-title">Express Fast Food</div>
+  </div>
+  <div class="header-actions">
+    <button id="cartBtn" class="header-btn" aria-label="Open Cart">
+      <i class="fa-solid fa-cart-shopping"></i>
+      <span id="cartBadge" class="cart-badge" style="display: none;">0</span>
+    </button>
+    <button id="headerWishlistBtn" class="header-btn" aria-label="Open Wishlist">
+      <i class="fa-solid fa-heart"></i>
+    </button>
+    <button id="themeToggle" class="header-btn" aria-label="Toggle Theme">
+      <i class="fa-solid fa-moon"></i>
+    </button>
+  </div>
+</header>
+
+<main>
+  <!-- USER INFO SECTION -->
+  <div id="userInfo" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;flex-wrap:wrap">
+      <div id="userWelcome" style="font-weight: 600;">Welcome, Guest!</div>
+  </div>
+
+  <!-- ALL PAGE SECTIONS -->
+  <section id="homeSection">
+    <!-- PRODUCT SLIDER CONTAINER -->
+    <div class="slider-container" id="productSliderContainer">
+      <div class="slider-wrapper" id="productSliderWrapper"></div>
+      <button class="slider-nav prev" id="productSliderPrev"><i class="fa-solid fa-chevron-left"></i></button>
+      <button class="slider-nav next" id="productSliderNext"><i class="fa-solid fa-chevron-right"></i></button>
+    </div>
+  
+    <!-- SEARCH & FILTERS -->
+    <div class="controls">
+      <div class="search">
+        <i class="fa-solid fa-magnifying-glass" style="opacity:.6"></i>
+        <input type="search" id="searchInput" placeholder="Search products..."/>
+      </div>
+    </div>
+    <div class="category-row" id="categoryRow" aria-label="product categories"></div>
+
+    <h3 class="section-title">All Products</h3>
+    <div id="products" class="product-list"></div>
+    <div id="productSkeletonLoader"></div>
+    <div id="noProducts" class="empty" style="display:none">No products found.</div>
+  </section>
+
+  <section id="cartSection" style="display:none">
+    <h3 class="section-title">Your Cart</h3>
+    <div id="cartItems"></div>
+    <div id="cartSummary" style="margin-top:16px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="font-weight:700">Total:</div>
+          <div style="text-align:right;">
+              <span style="font-weight:800; font-size: 1.2rem;">₹ <span id="cartTotal">0</span></span>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px; justify-content:flex-end; margin-top:12px;">
+            <button class="btn btn-outline" id="clearCartBtn">Clear</button>
+            <button class="btn btn-primary" id="checkoutBtn">Checkout</button>
+        </div>
+    </div>
+  </section>
+
+  <section id="historySection" style="display:none">
+    <h3 class="section-title">Your Orders</h3>
+    <div id="ordersList" class="product-list"></div>
+    <div id="historySkeletonLoader"></div>
+  </section>
+
+  <section id="orderDetailsSection" style="display:none">
+      <!-- Content generated by JavaScript -->
+  </section>
+  
+  <section id="profileSection" style="display:none">
+      <h3 class="section-title">Your Profile</h3>
+      <div id="profile-info" class="product-card" style="flex-direction:column; align-items:flex-start; gap: 16px; cursor: default;">
+        <div class="form-group" style="width: 100%;">
+          <label for="profile-name-input">Full Name</label>
+          <input type="text" id="profile-name-input" placeholder="Your full name">
+        </div>
+        <div class="form-group" style="width: 100%;">
+          <label for="profile-phone-input">Mobile Number</label>
+          <input type="tel" id="profile-phone-input" placeholder="Enter 10-digit mobile number" maxlength="10">
+        </div>
+        <div class="form-group" style="width: 100%;">
+          <label for="profile-address-input">Default Address</label>
+          <textarea id="profile-address-input" placeholder="Your default delivery address" rows="3"></textarea>
+        </div>
+        <button id="save-profile-btn" class="btn btn-primary" style="width: 100%;">Save Profile</button>
+        <hr style="width:100%; border-color: var(--border-color); margin: 8px 0;">
+        <button id="logout-btn" class="btn btn-outline" style="width: 100%; color: var(--text-secondary); border-color: var(--text-secondary);">Logout</button>
+      </div>
+  </section>
+</main>
+
+<!-- FOOTER -->
+<footer>
+    <div class="footer-container">
+        <p class="footer-copyright">&copy; 2025 Express Fast Food. All Rights Reserved.</p>
+    </div>
+</footer>
+
+<!-- BOTTOM NAVIGATION (UPDATED ORDER) -->
+<div class="bottom-nav" role="navigation" aria-label="main-navigation">
+  <button class="nav-btn active" id="navHome"><i class="fa-solid fa-house"></i><div style="font-size:12px">Home</div></button>
+  <button class="nav-btn" id="navHistory"><i class="fa-solid fa-clock-rotate-left"></i><div style="font-size:12px">History</div></button>
+  <button class="nav-btn" id="navProfile"><i class="fa-solid fa-user"></i><div style="font-size:12px">Profile</div></button>
+</div>
+
+
+<!-- ================================================== -->
+<!--                     MODALS                         -->
+<!-- ================================================== -->
+
+<!-- AUTHENTICATION MODAL (Updated for Phone + Password) -->
+<div id="auth-modal" class="modal-backdrop">
+  <div class="modal">
+    <button class="modal-close-btn"><i class="fa-solid fa-times"></i></button>
+    <h2 id="auth-title">Login</h2>
+    <div id="auth-form-container">
+      <div id="auth-main-form">
+        <!-- Name (for registration) -->
+        <div class="form-group" id="name-group" style="display:none;">
+            <label for="user-name">Your Name</label>
+            <input type="text" id="user-name" placeholder="Enter your full name">
+        </div>
+        <!-- Phone Number Input -->
+        <div class="form-group">
+          <label for="auth-identifier">10-Digit Mobile Number</label>
+          <input type="tel" id="auth-identifier" placeholder="Enter your mobile number" maxlength="10">
+        </div>
+        <!-- Password Input -->
+        <div class="form-group" id="password-group">
+          <label for="auth-password">Password</label>
+          <input type="password" id="auth-password" placeholder="********">
+        </div>
+        <button id="auth-action-btn" class="btn btn-primary" style="width:100%;">Login</button>
+      </div>
+    </div>
+    <p style="text-align:center; margin-top:16px;">
+      <span id="auth-prompt-text">Don't have an account?</span>
+      <a href="#" id="auth-switch-link">Register here</a>
+    </p>
+  </div>
+</div>
+
+<!-- PRODUCT DETAIL MODAL -->
+<div id="product-detail-modal" class="modal-backdrop">
+    <!-- Content generated by JavaScript -->
+</div>
+
+<!-- CHECKOUT MODAL -->
+<div id="checkout-modal" class="modal-backdrop">
+    <!-- Content generated by JavaScript -->
+</div>
+
+
+<!-- ================================================== -->
+<!--                 FIREBASE & APP LOGIC               -->
+<!-- ================================================== -->
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script type="module">
+  // ==================================================
+  // SECTION: FIREBASE CONFIGURATION & INITIALIZATION
+  // ==================================================
+  const firebaseConfig = {
+    apiKey: "AIzaSyCR-HCDd2hSg77uyW3uW4M6N1VxGthRIDw",
+    authDomain: "express-cd35c.firebaseapp.com",
+    databaseURL: "https://express-cd35c-default-rtdb.firebaseio.com",
+    projectId: "express-cd35c",
+    storageBucket: "express-cd35c.firebasestorage.app",
+    messagingSenderId: "296785707339",
+    appId: "1:296785707339:web:2acc6e1e7c14fa9336e8ce",
+    measurementId: "G-LFN38GSTCM"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+  const storage = firebase.storage();
+  
+  // ==================================================
+  // SECTION: GLOBAL APP STATE
+  // ==================================================
+  let currentUser = null;
+  let allProducts = [];
+  let allReviews = {};
+  let productRatings = {};
+  let activeCategory = "all";
+  let cart = [];
+  let serviceablePincodes = {};
+  let favoriteProducts = new Set();
+  let currentProductInModal = null;
+  
+  let isStoreOpen = true;
+  let storeStatusMessage = "Service Not Available";
+  let categoryStatus = {};
+
+  // ==================================================
+  // SECTION: DOM ELEMENT REFERENCES
+  // ==================================================
+  const DOMElements = {
+    body: document.body,
+    backBtn: document.getElementById('backBtn'),
+    headerTitle: document.getElementById('headerTitle'),
+    themeToggle: document.getElementById('themeToggle'),
+    cartBtn: document.getElementById('cartBtn'),
+    cartBadge: document.getElementById('cartBadge'),
+    headerWishlistBtn: document.getElementById('headerWishlistBtn'),
+    userWelcome: document.getElementById('userWelcome'),
+    productsEl: document.getElementById("products"),
+    productSkeletonLoader: document.getElementById('productSkeletonLoader'),
+    historySkeletonLoader: document.getElementById('historySkeletonLoader'),
+    searchInput: document.getElementById("searchInput"),
+    categoryRow: document.getElementById("categoryRow"),
+    noProductsEl: document.getElementById("noProducts"),
+    productSliderContainer: document.getElementById('productSliderContainer'),
+    productSliderWrapper: document.getElementById('productSliderWrapper'),
+    productSliderPrev: document.getElementById('productSliderPrev'),
+    productSliderNext: document.getElementById('productSliderNext'),
+    
+    // Modals
+    authModal: document.getElementById('auth-modal'),
+    productDetailModal: document.getElementById('product-detail-modal'),
+    checkoutModal: document.getElementById('checkout-modal'),
+    
+    // Auth Modal Elements
+    authModalCloseBtn: document.querySelector('#auth-modal .modal-close-btn'), 
+    authTitle: document.getElementById('auth-title'),
+    authMainForm: document.getElementById('auth-main-form'),
+    nameGroup: document.getElementById('name-group'),
+    passwordGroup: document.getElementById('password-group'), 
+    authIdentifierInput: document.getElementById('auth-identifier'),
+    authPasswordInput: document.getElementById('auth-password'),
+    userNameInput: document.getElementById('user-name'),
+    authActionButton: document.getElementById('auth-action-btn'),
+    authPromptText: document.getElementById('auth-prompt-text'),
+    authSwitchLink: document.getElementById('auth-switch-link'),
+    
+    // Navigation
+    navHome: document.getElementById("navHome"),
+    navProfile: document.getElementById("navProfile"),
+    navHistory: document.getElementById("navHistory"),
+    homeSection: document.getElementById("homeSection"),
+    cartSection: document.getElementById("cartSection"),
+    historySection: document.getElementById("historySection"),
+    profileSection: document.getElementById("profileSection"),
+    orderDetailsSection: document.getElementById('orderDetailsSection'),
+    
+    // Cart
+    cartItemsEl: document.getElementById("cartItems"),
+    cartSummary: document.getElementById('cartSummary'),
+    cartTotalEl: document.getElementById("cartTotal"),
+    clearCartBtn: document.getElementById("clearCartBtn"),
+    checkoutBtn: document.getElementById("checkoutBtn"),
+    
+    // Profile Page
+    profileNameInput: document.getElementById('profile-name-input'),
+    profilePhoneInput: document.getElementById('profile-phone-input'),
+    profileAddressInput: document.getElementById('profile-address-input'),
+    saveProfileBtn: document.getElementById('save-profile-btn'),
+    logoutBtn: document.getElementById('logout-btn'),
+  };
+
+  // ==================================================
+  // SECTION: INITIALIZATION & EVENT LISTENERS
+  // ==================================================
+  function init(){
+    initAuth();
+    initializeTheme();
+    setupEventListeners();
+    renderSkeletonLoaders('products', 6);
+    renderSkeletonLoaders('history', 3);
+    listenToFirebaseData();
+    showPage("home");
+  }
+
+  function setupEventListeners(){
+    DOMElements.themeToggle.addEventListener('click', toggleTheme);
+    DOMElements.cartBtn.addEventListener('click', () => showPage('cart'));
+    DOMElements.headerWishlistBtn.addEventListener('click', () => {
+        if (!currentUser) {
+            showAuthModal('login');
+            return;
+        }
+        activeCategory = 'favorites';
+        renderCategoryButtons();
+        showPage('home');
+        renderProducts();
+    });
+
+    DOMElements.navHome.addEventListener('click', () => showPage('home'));
+    DOMElements.navProfile.addEventListener('click', () => {
+        if(currentUser) showPage('profile');
+        else showAuthModal('login');
+    });
+    DOMElements.navHistory.addEventListener('click', () => showPage('history'));
+
+    DOMElements.backBtn.addEventListener('click', () => showPage(previousPage));
+    DOMElements.searchInput.addEventListener("input", renderProducts);
+    
+    DOMElements.clearCartBtn.addEventListener("click", clearCart);
+    DOMElements.checkoutBtn.addEventListener("click", () => startCheckout());
+    
+    DOMElements.logoutBtn.addEventListener('click', handleLogout);
+    DOMElements.saveProfileBtn.addEventListener('click', handleProfileUpdate);
+    
+    // Auth Modal Listeners
+    DOMElements.authModalCloseBtn.addEventListener('click', closeAllModals);
+    DOMElements.authSwitchLink.addEventListener('click', (e) => {
+        e.preventDefault();
+        const currentMode = DOMElements.authModal.dataset.mode;
+        showAuthModal(currentMode === 'login' ? 'register' : 'login');
+    });
+    DOMElements.authActionButton.addEventListener('click', () => {
+        const mode = DOMElements.authModal.dataset.mode;
+        if (mode === 'login') handleLogin();
+        else handleRegister();
+    });
+
+    DOMElements.productSliderPrev.addEventListener('click', () => moveProductSlider('prev'));
+    DOMElements.productSliderNext.addEventListener('click', () => moveProductSlider('next'));
+  }
+
+  function listenToFirebaseData(){
+    db.ref("products").on('value', handleProductSnapshot);
+    db.ref("settings/serviceableAreas").on('value', handleServiceableAreasSnapshot);
+    db.ref("product_reviews").on('value', handleReviewsSnapshot);
+    db.ref("categories").on('value', handleCategoryStatusSnapshot); 
+    db.ref("settings/storeStatus").on('value', handleStoreStatusSnapshot);
+  }
+
+  // ==================================================
+  // SECTION: DYNAMIC PRODUCT SLIDER & RATING LOGIC
+  // ==================================================
+  let productSliderInterval;
+  let productSliderIndex = 0;
+  let featuredProducts = [];
+
+  function calculateAllProductRatings() {
+      productRatings = {};
+      for (const productId in allReviews) {
+          const reviews = Object.values(allReviews[productId]);
+          const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+          productRatings[productId] = {
+              avg: reviews.length > 0 ? (totalRating / reviews.length) : 0,
+              count: reviews.length
+          };
+      }
+  }
+
+  function renderProductSlider() {
+      featuredProducts = [...allProducts]
+          .filter(p => p.enabled !== false)
+          .map(p => ({ ...p, avgRating: productRatings[p.key]?.avg || 0, reviewCount: productRatings[p.key]?.count || 0 }))
+          .sort((a, b) => b.avgRating - a.avgRating || b.reviewCount - a.reviewCount || (b.createdAt || 0) - (a.createdAt || 0))
+          .slice(0, 5);
+
+      if (productSliderInterval) clearInterval(productSliderInterval);
+      DOMElements.productSliderWrapper.innerHTML = '';
+      if (featuredProducts.length === 0) {
+          DOMElements.productSliderContainer.style.display = 'none';
+          return;
+      }
+      DOMElements.productSliderContainer.style.display = 'block';
+
+      featuredProducts.forEach(product => {
+          const slide = document.createElement('div');
+          slide.className = 'slide';
+          const displayImage = (product.images && product.images[0]) || product.image || `https://via.placeholder.com/400`;
+          slide.innerHTML = `<img src="${displayImage}" alt="${product.name}"><div class="slide-caption"><div>${product.name}</div><div class="star-display" style="font-size: 1rem;">${'★'.repeat(Math.round(product.avgRating))}</div></div>`;
+          slide.onclick = () => openProductModal(product);
+          DOMElements.productSliderWrapper.appendChild(slide);
+      });
+      
+      productSliderIndex = 0;
+      DOMElements.productSliderWrapper.style.transform = `translateX(0%)`;
+      if (featuredProducts.length > 1) {
+        DOMElements.productSliderPrev.style.display = 'block';
+        DOMElements.productSliderNext.style.display = 'block';
+        productSliderInterval = setInterval(() => moveProductSlider('next'), 5000);
+      } else {
+        DOMElements.productSliderPrev.style.display = 'none';
+        DOMElements.productSliderNext.style.display = 'none';
+      }
+  }
+  
+  function moveProductSlider(direction) {
+    if (featuredProducts.length <= 1) return;
+    productSliderIndex = (direction === 'next')
+      ? (productSliderIndex + 1) % featuredProducts.length
+      : (productSliderIndex - 1 + featuredProducts.length) % featuredProducts.length;
+    DOMElements.productSliderWrapper.style.transform = `translateX(-${productSliderIndex * 100}%)`;
+    clearInterval(productSliderInterval);
+    productSliderInterval = setInterval(() => moveProductSlider('next'), 5000);
+  }
+
+
+  // ==================================================
+  // SECTION: FIREBASE DATA HANDLERS
+  // ==================================================
+  function handleReviewsSnapshot(snap) {
+      allReviews = snap.val() || {};
+      calculateAllProductRatings();
+      renderProductSlider();
+      renderProducts();
+  }
+
+  function handleStoreStatusSnapshot(snap) {
+      const status = snap.val() || { open: true };
+      isStoreOpen = status.open;
+      storeStatusMessage = status.message || "Service Not Available";
+      DOMElements.checkoutBtn.disabled = !isStoreOpen;
+      DOMElements.checkoutBtn.innerText = isStoreOpen ? 'Checkout' : 'Store Closed';
+      renderProducts();
+  }
+
+  function handleCategoryStatusSnapshot(snap) {
+      categoryStatus = snap.val() || {};
+      renderCategoryButtons();
+      renderProducts();
+  }
+
+  function handleProductSnapshot(snap) {
+    allProducts = Object.entries(snap.val() || {}).map(([key,v]) => ({ key, ...v }));
+    DOMElements.productSkeletonLoader.innerHTML = ''; 
+    renderCategoryButtons(); 
+    renderProducts();
+    renderProductSlider();
+  }
+
+  function handleServiceableAreasSnapshot(snap) {
+    serviceablePincodes = snap.val() || {};
+  }
+
+  // ==================================================
+  // SECTION: AUTHENTICATION (Phone + Password Logic)
+  // ==================================================
+  
+  const dummyEmailSuffix = '@expressfastfood.com';
+
+  function initAuth() {
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        db.ref('users/' + user.uid).once('value').then(snapshot => {
+            const profile = snapshot.val() || {};
+            currentUser = {
+                uid: user.uid,
+                email: profile.email || user.email,
+                name: profile.name || user.displayName || 'User',
+                phone: profile.phone || '',
+                address: profile.address || ''
+            };
+            updateUIForAuthState(true);
+            loadUserData();
+        });
+      } else {
+        currentUser = null;
+        updateUIForAuthState(false);
+        cart = [];
+        favoriteProducts.clear();
+        renderCart();
+        renderProducts();
+      }
+    });
+  }
+
+  function showAuthModal(mode = 'login') {
+    const modal = DOMElements.authModal;
+    modal.dataset.mode = mode;
+    
+    DOMElements.authIdentifierInput.value = '';
+    DOMElements.authPasswordInput.value = '';
+    DOMElements.userNameInput.value = '';
+
+    if (mode === 'login') {
+      DOMElements.authTitle.innerText = 'Login';
+      DOMElements.nameGroup.style.display = 'none';
+      DOMElements.authPromptText.innerText = "Don't have an account?";
+      DOMElements.authSwitchLink.innerText = "Register here";
+      DOMElements.authActionButton.innerText = "Login";
+    } else if (mode === 'register') {
+      DOMElements.authTitle.innerText = 'Register';
+      DOMElements.nameGroup.style.display = 'flex';
+      DOMElements.authPromptText.innerText = "Already have an account?";
+      DOMElements.authSwitchLink.innerText = "Login here";
+      DOMElements.authActionButton.innerText = "Register";
+    }
+    modal.style.display = 'flex';
+  }
+
+  async function handleLogin() {
+    let identifier = DOMElements.authIdentifierInput.value.trim();
+    const password = DOMElements.authPasswordInput.value.trim();
+    if (!identifier || !password) {
+      flashMessage('Please enter mobile number and password.', 'error');
+      return;
+    }
+    if (!/^\d{10}$/.test(identifier)) {
+      flashMessage('Please enter a valid 10-digit mobile number.', 'error');
+      return;
+    }
+    
+    const dummyEmail = identifier + dummyEmailSuffix;
+
+    DOMElements.authActionButton.disabled = true;
+    DOMElements.authActionButton.innerText = 'Logging in...';
+    try {
+      await auth.signInWithEmailAndPassword(dummyEmail, password);
+      closeAllModals();
+      flashMessage('Successfully logged in!', 'success');
+    } catch (error) {
+      flashMessage(`Login failed: Invalid mobile or password.`, 'error');
+    } finally {
+      DOMElements.authActionButton.disabled = false;
+      DOMElements.authActionButton.innerText = 'Login';
+    }
+  }
+
+  async function handleRegister() {
+    const name = DOMElements.userNameInput.value.trim();
+    const phone = DOMElements.authIdentifierInput.value.trim();
+    const password = DOMElements.authPasswordInput.value.trim();
+
+    if (!name || !phone || !password) {
+      flashMessage('Please fill all fields.', 'error');
+      return;
+    }
+    if (!/^\d{10}$/.test(phone)) {
+      flashMessage('Please enter a valid 10-digit mobile number.', 'error');
+      return;
+    }
+    if (password.length < 6) {
+      flashMessage('Password must be at least 6 characters.', 'error');
+      return;
+    }
+
+    const dummyEmail = phone + dummyEmailSuffix;
+
+    DOMElements.authActionButton.disabled = true;
+    DOMElements.authActionButton.innerText = 'Registering...';
+    try {
+      const userCredential = await auth.createUserWithEmailAndPassword(dummyEmail, password);
+      const user = userCredential.user;
+      await user.updateProfile({ displayName: name });
+      await db.ref('users/' + user.uid).set({
+        name: name,
+        phone: phone, 
+        email: dummyEmail,
+        createdAt: Date.now()
+      });
+      closeAllModals();
+      flashMessage('Registration successful!', 'success');
+    } catch (error) {
+      if (error.code === 'auth/email-already-in-use') {
+        flashMessage('This mobile number is already registered.', 'error');
+      } else {
+        flashMessage(`Registration failed: ${error.message}`, 'error');
+      }
+    } finally {
+      DOMElements.authActionButton.disabled = false;
+      DOMElements.authActionButton.innerText = 'Register';
+    }
+  }
+
+  function handleLogout() {
+      auth.signOut().then(() => {
+          flashMessage('You have been logged out.');
+          showPage('home');
+      });
+  }
+  
+  function updateUIForAuthState(isLoggedIn) {
+      if (isLoggedIn && currentUser) {
+          DOMElements.userWelcome.innerText = `Welcome, ${currentUser.name}!`;
+          DOMElements.profileNameInput.value = currentUser.name;
+          DOMElements.profilePhoneInput.value = currentUser.phone || '';
+          DOMElements.profileAddressInput.value = currentUser.address || '';
+      } else {
+          DOMElements.userWelcome.innerText = 'Welcome, Guest! Please login to continue.';
+      }
+  }
+
+  function loadUserData() {
+    if(!currentUser) return;
+    db.ref(`users/${currentUser.uid}/favorites`).on('value', snapshot => {
+        favoriteProducts = new Set(Object.keys(snapshot.val() || {}));
+        renderProducts();
+    });
+    db.ref(`users/${currentUser.uid}/cart`).on('value', snapshot => {
+        cart = Object.values(snapshot.val() || {});
+        renderCart();
+    });
+  }
+  
+  async function handleProfileUpdate() {
+      const newName = DOMElements.profileNameInput.value.trim();
+      const newPhone = DOMElements.profilePhoneInput.value.trim();
+      const newAddress = DOMElements.profileAddressInput.value.trim();
+
+      if (!newName) { flashMessage('Name cannot be empty.', 'error'); return; }
+      if (newPhone && !/^\d{10}$/.test(newPhone)) { flashMessage('Please enter a valid 10-digit mobile number.', 'error'); return; }
+      
+      DOMElements.saveProfileBtn.disabled = true;
+      DOMElements.saveProfileBtn.innerText = 'Saving...';
+      
+      const profileData = { name: newName, phone: newPhone, address: newAddress };
+      
+      try {
+          await auth.currentUser.updateProfile({ displayName: newName });
+          await db.ref(`users/${currentUser.uid}`).update(profileData);
+          currentUser = { ...currentUser, ...profileData };
+          updateUIForAuthState(true);
+          flashMessage('Profile updated successfully!', 'success');
+      } catch (error) {
+          flashMessage(`Error updating profile: ${error.message}`, 'error');
+      } finally {
+          DOMElements.saveProfileBtn.disabled = false;
+          DOMElements.saveProfileBtn.innerText = 'Save Profile';
+      }
+  }
+  
+  // ==================================================
+  // SECTION: UI & PAGE MANAGEMENT
+  // ==================================================
+  let previousPage = 'home';
+  function showPage(name, data = null){
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('main > section').forEach(s => s.style.display = 'none');
+    
+    const currentPage = window.location.hash.replace('#', '') || 'home';
+    if (name !== currentPage) previousPage = currentPage;
+    
+    let page, navBtn;
+    switch(name) {
+        case 'profile': page = DOMElements.profileSection; navBtn = DOMElements.navProfile; DOMElements.headerTitle.innerText = "Profile"; break;
+        case 'history': page = DOMElements.historySection; navBtn = DOMElements.navHistory; DOMElements.headerTitle.innerText = "Order History"; loadOrdersForUser(); break;
+        case 'cart': page = DOMElements.cartSection; DOMElements.headerTitle.innerText = "Your Cart"; break;
+        case 'orderDetails': page = DOMElements.orderDetailsSection; DOMElements.headerTitle.innerText = "Order Details"; renderOrderDetailPage(data); break;
+        default: page = DOMElements.homeSection; navBtn = DOMElements.navHome; DOMElements.headerTitle.innerText = "Express Fast Food"; name = 'home'; break;
+    }
+    page.style.display = 'block';
+    if(navBtn) navBtn.classList.add('active');
+    
+    window.history.pushState({ page: name, data: data }, '', `#${name}`);
+    DOMElements.backBtn.style.display = (name === 'home') ? 'none' : 'flex';
+  }
+
+  window.addEventListener('popstate', (event) => {
+    const pageName = event.state ? event.state.page : 'home';
+    const pageData = event.state ? event.state.data : null;
+    showPage(pageName, pageData);
+  });
+
+
+  function flashMessage(msg, type = 'success'){
+    const t = document.createElement('div');
+    t.innerText = msg;
+    const bgColor = type === 'error' ? 'var(--danger)' : 'rgba(0,0,0,0.8)';
+    t.style.cssText = `position:fixed; bottom:90px; left:50%; transform:translateX(-50%); background:${bgColor}; color:#fff; padding:10px 14px; border-radius:10px; z-index:9999; transition: opacity 0.5s;`;
+    DOMElements.body.appendChild(t);
+    setTimeout(()=> t.style.opacity = '0', 2500);
+    setTimeout(()=> t.remove(), 3000);
+  }
+  
+  function closeAllModals() {
+    document.querySelectorAll('.modal-backdrop').forEach(modal => modal.style.display = 'none');
+  }
+
+  // ==================================================
+  // SECTION: SKELETON LOADERS
+  // ==================================================
+  function renderSkeletonLoaders(type, count) {
+    let container, skeletonHTML = '';
+    if (type === 'products') {
+      container = DOMElements.productSkeletonLoader;
+      for (let i = 0; i < count; i++) {
+        skeletonHTML += `<div class="skeleton-card"><div class="skeleton skeleton-img"></div><div class="skeleton-text"><div class="skeleton skeleton-line"></div><div class="skeleton-line short"></div></div></div>`;
+      }
+    } else if (type === 'history') {
+      container = DOMElements.historySkeletonLoader;
+      for (let i = 0; i < count; i++) {
+        skeletonHTML += `<div class="skeleton-card" style="height: 100px;"></div>`;
+      }
+    }
+    if (container) container.innerHTML = skeletonHTML;
+  }
+  
+  // ==================================================
+  // SECTION: PRODUCT & CATEGORY RENDERING
+  // ==================================================
+  function renderProducts(){
+    if (allProducts.length === 0) {
+        DOMElements.productsEl.innerHTML = '';
+        DOMElements.noProductsEl.style.display = 'block';
+        return;
+    };
+    
+    const q = DOMElements.searchInput.value.trim().toLowerCase();
+    let filteredList = [...allProducts];
+    
+    if (activeCategory === 'favorites') {
+      filteredList = filteredList.filter(p => favoriteProducts.has(p.key));
+    } else if (activeCategory && activeCategory !== 'all') {
+      filteredList = filteredList.filter(p => (p.category||'').trim().toLowerCase() === activeCategory.toLowerCase());
+    }
+
+    if (q) {
+      filteredList = filteredList.filter(p => (p.name||'').toLowerCase().includes(q));
+    }
+    
+    filteredList.sort((a, b) => isProductOrderable(b) - isProductOrderable(a));
+
+    DOMElements.productsEl.innerHTML = '';
+    DOMElements.noProductsEl.style.display = filteredList.length === 0 ? 'block' : 'none';
+
+    filteredList.forEach(p => DOMElements.productsEl.appendChild(createProductCard(p)));
+  }
+  
+  function isProductOrderable(product) {
+      const isProductEnabled = product.enabled !== false;
+      const categoryName = (product.category || '').toLowerCase();
+      const isCategoryEnabled = categoryStatus[categoryName] ? categoryStatus[categoryName].enabled !== false : true;
+      const isStockAvailable = (product.quantity || 0) > 0;
+      
+      return isProductEnabled && isStoreOpen && isCategoryEnabled && isStockAvailable;
+  }
+
+  function createProductCard(p) {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    const isFavorited = favoriteProducts.has(p.key);
+    const displayImage = (p.images && p.images[0]) || p.image || `https://via.placeholder.com/400`;
+    const isOrderable = isProductOrderable(p);
+    
+    let disabledMessage = "Not Available";
+    if (!isStoreOpen) disabledMessage = storeStatusMessage;
+    else if (p.enabled === false) disabledMessage = "Not Available";
+    else disabledMessage = "Coming Soon";
+
+    let discountHTML = '';
+    let priceHTML = `<span class="product-price">₹${p.price||0}</span>`;
+    if (p.mrp && p.mrp > p.price) {
+        const discountPercentage = Math.round(((p.mrp - p.price) / p.mrp) * 100);
+        discountHTML = `<div class="discount-badge">${discountPercentage}% OFF</div>`;
+        priceHTML = `<span class="product-price">₹${p.price||0}</span> <s class="original-price">₹${p.mrp}</s>`;
+    }
+
+    let ratingHTML = '';
+    const ratingData = productRatings[p.key];
+    if (ratingData && ratingData.count > 0) {
+        ratingHTML = `<div class="star-display-card">${'★'.repeat(Math.round(ratingData.avg))}<span style="color: var(--text-muted); font-size: 0.8rem;">(${ratingData.count})</span></div>`;
+    }
+
+    card.innerHTML = `
+      <div class="product-card-image-container">
+        ${!isOrderable ? `<div class="product-overlay">${disabledMessage}</div>` : ''}
+        ${discountHTML}
+        <img src="${displayImage}" alt="${p.name || 'Product'}">
+        <button class="fav-btn ${isFavorited ? 'favorited' : ''}" aria-label="Favorite"><i class="fa-${isFavorited ? 'solid' : 'regular'} fa-heart"></i></button>
+      </div>
+      <div class="product-info">
+        <div class="product-name">${p.name || 'Unnamed'}</div>
+        ${ratingHTML}
+        <div>${priceHTML}</div>
+        <div class="product-actions">
+          <button class="btn btn-primary btn-add-to-cart" ${!isOrderable ? 'disabled' : ''} style="flex-grow: 3;"><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
+          <button class="btn btn-outline btn-details btn-icon" aria-label="View details"><i class="fa-solid fa-eye"></i></button>
+        </div>
+      </div>
+    `;
+    
+    card.querySelector('.btn-add-to-cart').onclick = (e) => { e.stopPropagation(); addToCart(p); };
+    card.querySelector('.btn-details').onclick = (e) => { e.stopPropagation(); openProductModal(p); };
+    card.querySelector('.fav-btn').onclick = (e) => { e.stopPropagation(); toggleFavorite(p.key, e.currentTarget); };
+    card.onclick = () => openProductModal(p);
+    
+    return card;
+  }
+
+  function renderCategoryButtons(){
+    if (allProducts.length === 0) return;
+    const derivedCats = [...new Set(allProducts.map(p => (p.category || 'Uncategorized').trim()))];
+    const cats = ['all', 'favorites', ...derivedCats];
+    DOMElements.categoryRow.innerHTML = '';
+    
+    cats.forEach(cat => {
+      const catKey = cat.toLowerCase();
+      if (cat !== 'all' && cat !== 'favorites' && categoryStatus[catKey] && categoryStatus[catKey].enabled === false) return;
+      
+      const b = document.createElement('button');
+      b.className = 'cat-btn' + (catKey === activeCategory ? ' active' : '');
+      if (cat === 'favorites') b.classList.add('favorite-btn');
+      b.innerText = capitalize(cat);
+      b.onclick = ()=> { activeCategory = catKey; renderCategoryButtons(); renderProducts(); };
+      DOMElements.categoryRow.appendChild(b);
+    });
+  }
+
+  // ==================================================
+  // SECTION: PRODUCT DETAIL MODAL & SHARING
+  // ==================================================
+  async function openProductModal(product) {
+    currentProductInModal = product;
+    const modalContainer = DOMElements.productDetailModal;
+    const images = (product.images && product.images.length > 0) ? product.images : [product.image || `https://via.placeholder.com/400?text=${encodeURIComponent(product.name)}`];
+    const isOrderable = isProductOrderable(product);
+    const disabledMessage = !isStoreOpen ? storeStatusMessage : 'Not Available';
+
+    const reviewsSnap = await db.ref(`product_reviews/${product.key}`).once('value');
+    const reviews = reviewsSnap.val() ? Object.values(reviewsSnap.val()) : [];
+    const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+    const averageRating = reviews.length > 0 ? (totalRating / reviews.length).toFixed(1) : 'N/A';
+    const numReviews = reviews.length;
+
+    modalContainer.innerHTML = `
+      <div class="modal">
+        <div style="position: absolute; top: 10px; right: 10px; display: flex; gap: 8px; z-index: 10;">
+          <button class="modal-share-btn header-btn" aria-label="Share Product"><i class="fa-solid fa-share-nodes"></i></button>
+          <button class="modal-close-btn header-btn" aria-label="Go Back"><i class="fa-solid fa-arrow-left"></i></button>
+        </div>
+        <div class="product-detail-content">
+          <div class="product-detail-image-slider">
+            <div class="product-detail-image-wrapper">${images.map(url => `<img src="${url}">`).join('')}</div>
+            ${images.length > 1 ? `<button class="slider-nav-btn prev"><i class="fa-solid fa-chevron-left"></i></button><button class="slider-nav-btn next"><i class="fa-solid fa-chevron-right"></i></button>` : ''}
+          </div>
+          <div class="product-detail-info">
+            <h2 class="product-name" style="margin-top: 0;">${product.name}</h2>
+            <p class="product-price" style="font-size: 1.5rem;">₹${product.price}</p>
+            <div style="display:flex; align-items:center; gap: 8px; margin-bottom:12px;">
+                <span class="star-display">${'★'.repeat(Math.round(averageRating))}</span>
+                <span>${averageRating} / 5 (${numReviews} reviews)</span>
+            </div>
+            <p>${product.description || 'No description available.'}</p>
+            ${!isOrderable ? `<div class="empty" style="padding: 10px; background: var(--bg-primary); border-radius: 8px;"><b>${disabledMessage}</b></div>` : ''}
+            <div style="display:flex; gap: 8px; margin-top: 16px;">
+                <button class="btn btn-primary btn-buy-now-modal" style="flex: 1; padding: 12px;" ${!isOrderable ? 'disabled' : ''}><i class="fa-solid fa-bolt"></i> Buy Now</button>
+                <button class="btn btn-outline btn-add-cart-modal" style="flex: 1; padding: 12px;" ${!isOrderable ? 'disabled' : ''}><i class="fa-solid fa-cart-plus"></i> Add to Cart</button>
+            </div>
+            <h4 class="section-title">Leave a Review</h4>
+            <div id="review-form">
+                <div class="form-group"><label>Your Rating</label><div class="star-rating" id="review-stars"><input type="radio" id="star5" name="rating" value="5" /><label for="star5">★</label><input type="radio" id="star4" name="rating" value="4" /><label for="star4">★</label><input type="radio" id="star3" name="rating" value="3" /><label for="star3">★</label><input type="radio" id="star2" name="rating" value="2" /><label for="star2">★</label><input type="radio" id="star1" name="rating" value="1" /><label for="star1">★</label></div></div>
+                <div class="form-group"><label for="review-comment">Comment</label><textarea id="review-comment" placeholder="Share your thoughts..." rows="3"></textarea></div>
+                <div class="form-group"><label for="review-image-upload">Upload Image (Optional)</label><input type="file" id="review-image-upload" accept="image/*"></div>
+                <button class="btn btn-primary" id="submit-review-btn" style="width:100%;">Submit Review</button>
+            </div>
+            <h4 class="section-title">Customer Reviews (${numReviews})</h4>
+            <div id="product-reviews-list">${reviews.length > 0 ? reviews.map(r => `<div class="review-card"><div class="review-header"><span class="review-author">${r.userName || 'Anonymous'}</span><span class="star-display">${'★'.repeat(r.rating)}</span></div><p>${r.comment}</p>${r.imageUrl ? `<img src="${r.imageUrl}" alt="Review image" class="review-image">` : ''}</div>`).join('') : '<div class="empty">No reviews yet.</div>'}</div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    modalContainer.style.display = 'flex';
+    modalContainer.querySelector('.modal-close-btn').onclick = closeAllModals;
+    modalContainer.querySelector('.modal-share-btn').onclick = () => handleShareProduct(product);
+    modalContainer.querySelector('.btn-buy-now-modal').onclick = () => { handleBuyNow(product); };
+    modalContainer.querySelector('.btn-add-cart-modal').onclick = () => { addToCart(product); };
+    modalContainer.querySelector('#submit-review-btn').onclick = () => submitReview(product.key);
+
+    if (images.length > 1) {
+      let currentIndex = 0;
+      const imageWrapper = modalContainer.querySelector('.product-detail-image-wrapper');
+      const updateSlider = () => imageWrapper.style.transform = `translateX(-${currentIndex * 100}%)`;
+      modalContainer.querySelector('.slider-nav-btn.prev').onclick = () => { currentIndex = (currentIndex > 0) ? currentIndex - 1 : images.length - 1; updateSlider(); };
+      modalContainer.querySelector('.slider-nav-btn.next').onclick = () => { currentIndex = (currentIndex < images.length - 1) ? currentIndex + 1 : 0; updateSlider(); };
+    }
+  }
+  
+  function handleShareProduct(product) {
+      if (!navigator.share) { flashMessage('Sharing not supported on this browser.', 'warning'); return; }
+      navigator.share({ title: product.name, text: `Check out ${product.name} at Express Fast Food!`, url: window.location.href }).catch(err => console.log('Error sharing:', err));
+  }
+
+
+  // ==================================================
+  // SECTION: CART & FAVORITES
+  // ==================================================
+  function toggleFavorite(productKey, buttonEl) {
+    if(!currentUser) { showAuthModal('login'); return; }
+    const favRef = db.ref(`users/${currentUser.uid}/favorites/${productKey}`);
+    if (favoriteProducts.has(productKey)) {
+      favoriteProducts.delete(productKey);
+      favRef.remove();
+      buttonEl.classList.remove('favorited');
+      buttonEl.innerHTML = `<i class="fa-regular fa-heart"></i>`;
+    } else {
+      favoriteProducts.add(productKey);
+      favRef.set(true);
+      buttonEl.classList.add('favorited');
+      buttonEl.innerHTML = `<i class="fa-solid fa-heart"></i>`;
+    }
+    if (activeCategory === 'favorites') renderProducts();
+  }
+
+  function addToCart(product) {
+    if (!isProductOrderable(product)) {
+        const message = !isStoreOpen ? storeStatusMessage : "This item is currently unavailable.";
+        flashMessage(message, 'error');
+        return;
+    }
+    
+    if(!currentUser) { showAuthModal('login'); return; }
+    const existingItem = cart.find(item => item.key === product.key);
+    if(existingItem) existingItem.quantity += 1;
+    else cart.push({ ...product, quantity: 1 });
+    syncCartWithFirebase();
+    flashMessage(`${product.name} added to cart`, 'success');
+  }
+
+  function syncCartWithFirebase() {
+    if (!currentUser) return;
+    const cartObject = cart.reduce((obj, item) => { obj[item.key] = item; return obj; }, {});
+    db.ref(`users/${currentUser.uid}/cart`).set(cartObject);
+  }
+
+  function clearCart() {
+      if(!currentUser || cart.length === 0) return;
+      if(confirm('Are you sure you want to clear your cart?')) {
+          cart = [];
+          db.ref(`users/${currentUser.uid}/cart`).remove();
+          flashMessage('Cart cleared!');
+      }
+  }
+  
+  function renderCart() {
+    const total = cart.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+    DOMElements.cartTotalEl.innerText = total.toFixed(2);
+    const count = cart.reduce((sum, item) => sum + item.quantity, 0);
+    DOMElements.cartBadge.innerText = count;
+    DOMElements.cartBadge.style.display = count > 0 ? 'flex' : 'none';
+
+    DOMElements.cartSummary.style.display = cart.length === 0 ? 'none' : 'block';
+    DOMElements.cartItemsEl.innerHTML = cart.length === 0 ? '<div class="empty">Your cart is empty.</div>' : '';
+    
+    cart.forEach(it => {
+        const row = document.createElement('div');
+        row.className = 'product-card';
+        row.style.cssText = 'flex-direction: row; align-items: center;';
+        const displayImage = (it.images && it.images[0]) || it.image || `https://via.placeholder.com/90`;
+        row.innerHTML = `
+            <img src="${displayImage}" style="width:64px;height:64px;aspect-ratio:1/1;" alt="${it.name}">
+            <div class="product-info" style="padding: 0 12px;">
+                <div class="product-name">${it.name}</div>
+                <div class="product-price">₹${it.price} x ${it.quantity} = ₹${it.price * it.quantity}</div>
+            </div>
+            <div>
+                <button class="btn-qty-update" data-key="${it.key}" data-delta="-1">-</button>
+                <button class="btn-qty-update" data-key="${it.key}" data-delta="1">+</button>
+            </div>
+        `;
+        DOMElements.cartItemsEl.appendChild(row);
+    });
+
+    DOMElements.cartItemsEl.querySelectorAll('.btn-qty-update').forEach(b => {
+        b.onclick = () => updateQty(b.dataset.key, parseInt(b.dataset.delta));
+    });
+  }
+  
+  function updateQty(key, delta) {
+    const item = cart.find(i => i.key === key);
+    if(!item) return;
+    item.quantity += delta;
+    if(item.quantity <= 0) cart = cart.filter(i => i.key !== key);
+    syncCartWithFirebase();
+  }
+
+  // ==================================================
+  // SECTION: CHECKOUT & ORDERING
+  // ==================================================
+  let productsToCheckout = []; 
+
+  function startCheckout(singleProduct = null) {
+    if (!isStoreOpen) { flashMessage(storeStatusMessage, 'error'); return; }
+    if(!currentUser) { showAuthModal('login'); return; }
+
+    productsToCheckout = singleProduct ? [{ ...singleProduct, quantity: 1 }] : cart;
+    if(productsToCheckout.length === 0) { flashMessage('Your cart is empty!', 'error'); return; }
+    
+    for (const item of productsToCheckout) {
+        const liveProduct = allProducts.find(p => p.key === item.key);
+        if (!liveProduct || !isProductOrderable(liveProduct)) {
+            flashMessage(`'${item.name}' is currently unavailable.`, 'error');
+            if (!singleProduct) showPage('cart');
+            return;
+        }
+    }
+    
+    const modal = DOMElements.checkoutModal;
+    const checkoutTotal = productsToCheckout.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+
+    modal.innerHTML = `<div class="modal">
+      <button class="modal-close-btn"><i class="fa-solid fa-times"></i></button>
+      <div id="checkout-step-1">
+        <h2>Delivery Details</h2>
+        <div class="form-group"><label for="checkout-name">Full Name</label><input type="text" id="checkout-name" value="${currentUser.name}" /></div>
+        <div class="form-group"><label for="checkout-phone">Mobile Number</label><input type="tel" id="checkout-phone" placeholder="10-digit number" maxlength="10" value="${currentUser.phone || ''}" /></div>
+        <div class="form-group"><label for="checkout-pincode">Pin Code</label><input type="text" id="checkout-pincode" maxlength="6" /></div>
+        <div class="form-group"><label for="checkout-city">City</label><input type="text" id="checkout-city" readonly /></div>
+        <div class="form-group"><label for="checkout-district">District</label><input type="text" id="checkout-district" readonly /></div>
+        <div class="form-group"><label for="checkout-state">State</label><input type="text" id="checkout-state" readonly /></div>
+        <div class="form-group"><label for="checkout-address">Full Address</label><textarea id="checkout-address">${currentUser.address || ''}</textarea></div>
+        <p style="text-align:right;">Order Total: <b>₹${checkoutTotal.toFixed(2)}</b></p>
+        <div style="display:flex;gap:8px;justify-content:flex-end;"><button class="btn btn-outline" id="btn-close-modal-checkout">Cancel</button><button class="btn btn-primary" id="btn-continue-1">Continue</button></div>
+      </div>
+      <div id="checkout-step-2" style="display:none;">
+        <h2>Order Summary</h2>
+        <div id="checkout-summary-items"></div>
+        <div class="order-summary-total">Total: ₹${checkoutTotal.toFixed(2)}</div>
+        <h3 class="section-title">Payment Method</h3>
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <button class="btn btn-outline" id="btn-cod"><i class="fa-solid fa-money-bill"></i> Cash on Delivery</button>
+            <button class="btn btn-primary" id="btn-razorpay"><i class="fa-solid fa-credit-card"></i> Pay with Razorpay</button>
+        </div>
+        <button class="btn" id="btn-back-to-step-1" style="width:100%; margin-top:16px;">Back</button>
+      </div>
+    </div>`;
+    modal.style.display = 'flex';
+    modal.querySelector('.modal-close-btn').onclick = closeAllModals;
+    modal.querySelector('#btn-close-modal-checkout').onclick = closeAllModals;
+    modal.querySelector('#checkout-pincode').addEventListener('input', fetchPincodeDetails);
+    modal.querySelector('#btn-continue-1').onclick = () => showCheckoutStep(2);
+    modal.querySelector('#btn-back-to-step-1').onclick = () => showCheckoutStep(1);
+    modal.querySelector('#btn-cod').onclick = () => placeOrder('Cash on Delivery');
+    modal.querySelector('#btn-razorpay').onclick = initiateRazorpayPayment;
+  }
+  
+  function showCheckoutStep(step) {
+      if (step === 2) {
+          const name = document.getElementById('checkout-name').value.trim();
+          const phone = document.getElementById('checkout-phone').value.trim();
+          const pincode = document.getElementById('checkout-pincode').value.trim();
+          const address = document.getElementById('checkout-address').value.trim();
+          
+          if(!name || !/^\d{10}$/.test(phone) || pincode.length !== 6 || !address) { flashMessage('Please fill all fields correctly.', 'error'); return; }
+          if (Object.keys(serviceablePincodes).length > 0 && !serviceablePincodes[pincode]) { flashMessage('Sorry, service is not available in your area.', 'error'); return; }
+
+          document.getElementById('checkout-step-1').style.display = 'none';
+          document.getElementById('checkout-step-2').style.display = 'block';
+          document.getElementById('checkout-summary-items').innerHTML = productsToCheckout.map(item => `<div class="order-summary-item"><span>${item.name} <small>(₹${item.price} x ${item.quantity})</small></span><b>₹${(item.price * item.quantity).toFixed(2)}</b></div>`).join('');
+      } else {
+          document.getElementById('checkout-step-1').style.display = 'block';
+          document.getElementById('checkout-step-2').style.display = 'none';
+      }
+  }
+
+
+  function handleBuyNow(product) {
+    closeAllModals(); 
+    startCheckout(product); 
+  }
+
+  
+  async function placeOrder(paymentMethod, paymentDetails = {}) {
+    if (!isStoreOpen) { flashMessage('The store is currently closed.', 'error'); return; }
+    const orderData = {
+        userId: currentUser.uid,
+        userName: document.getElementById('checkout-name').value.trim(),
+        userEmail: currentUser.email,
+        mobileNumber: document.getElementById('checkout-phone').value.trim(),
+        address: document.getElementById('checkout-address').value.trim(),
+        city: document.getElementById('checkout-city').value,
+        district: document.getElementById('checkout-district').value,
+        pincode: document.getElementById('checkout-pincode').value.trim(),
+        state: document.getElementById('checkout-state').value,
+        items: productsToCheckout, 
+        total: productsToCheckout.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0),
+        status: 'Pending', 
+        paymentMethod: paymentMethod,
+        paymentDetails: paymentDetails,
+        createdAt: Date.now()
+    };
+    try {
+        await db.ref('orders').push(orderData);
+        flashMessage('Order Placed Successfully! ✅');
+        if (productsToCheckout === cart) {
+            cart = [];
+            db.ref(`users/${currentUser.uid}/cart`).remove();
+        }
+        productsToCheckout = [];
+        closeAllModals();
+        showPage('history');
+    } catch (err) { flashMessage('Error placing order: ' + err.message, 'error'); }
+  }
+  
+    function initiateRazorpayPayment() {
+      const totalAmount = productsToCheckout.reduce((sum, item) => sum + (item.price || 0) * item.quantity, 0);
+      var options = {
+          "key": "rzp_test_RT0M8gu2Ymx1OVVc4OJoh5DKZ70QZ3st0y9G0M", 
+          "amount": totalAmount * 100,
+          "currency": "INR",
+          "name": "Express Fast Food",
+          "description": "Payment for Order",
+          "image": "https://example.com/your_logo.png",
+          "handler": (response) => placeOrder('Razorpay', { paymentId: response.razorpay_payment_id }),
+          "prefill": {
+              "name": document.getElementById('checkout-name').value.trim(),
+              "email": "", // Email is removed
+              "contact": document.getElementById('checkout-phone').value.trim()
+          },
+          "theme": { "color": "#4f46e5" }
+      };
+      var rzp1 = new Razorpay(options);
+      rzp1.on('payment.failed', (response) => flashMessage(`Payment failed: ${response.error.description}`, 'error'));
+      rzp1.open();
+  }
+
+
+  async function fetchPincodeDetails() {
+    const pin = document.getElementById('checkout-pincode').value;
+    const cityEl = document.getElementById('checkout-city'), districtEl = document.getElementById('checkout-district'), stateEl = document.getElementById('checkout-state');
+    if(pin.length !== 6) { cityEl.value= ''; districtEl.value = ''; stateEl.value = ''; return; }
+    try {
+        const res = await fetch(`https://api.postalpincode.in/pincode/${pin}`);
+        const [data] = await res.json();
+        if(data.Status === "Success"){
+            const place = data.PostOffice[0];
+            stateEl.value = place.State;
+            districtEl.value = place.District;
+            cityEl.value = place.Name;
+        } else { stateEl.value = 'Invalid Pincode'; districtEl.value = ''; cityEl.value=''; }
+    } catch(e) { stateEl.value = 'Error fetching details'; districtEl.value = ''; cityEl.value=''; }
+  }
+
+  // ==================================================
+  // SECTION: ORDER HISTORY & SHARING
+  // ==================================================
+  
+  function handleOrderCancellation(orderId) {
+      if (!orderId) return;
+      if (confirm('Are you sure you want to cancel this order?')) {
+          db.ref(`orders/${orderId}/status`).set('Cancelled')
+              .then(() => { flashMessage('Order has been cancelled.', 'success'); loadOrdersForUser(); })
+              .catch(error => flashMessage(`Failed to cancel order: ${error.message}`, 'error'));
+      }
+  }
+
+  function loadOrdersForUser() {
+      const ordersListEl = document.getElementById('ordersList');
+      if(!currentUser) {
+          ordersListEl.innerHTML = '<div class="empty">Please login to see your order history.</div>';
+          return;
+      }
+      DOMElements.historySkeletonLoader.style.display = 'block';
+      ordersListEl.innerHTML = '';
+      
+      db.ref('orders').orderByChild('userId').equalTo(currentUser.uid).once('value', snap => {
+          DOMElements.historySkeletonLoader.style.display = 'none';
+          const list = Object.entries(snap.val() || {}).map(([key, val]) => ({key, ...val}));
+          if (list.length === 0) {
+              ordersListEl.innerHTML = '<div class="empty">You have no past orders.</div>';
+              return;
+          }
+          list.sort((a,b) => b.createdAt - a.createdAt).forEach(o => {
+              const node = document.createElement('div');
+              node.className = 'product-card';
+              node.style.cursor = 'default';
+              const detailsBtn = o.status !== 'Cancelled' ? `<button class="btn btn-primary btn-order-details" data-key="${o.key}">Details</button>` : '';
+              const cancelBtn = o.status === 'Pending' ? `<button class="btn btn-danger btn-cancel-order" data-key="${o.key}">Cancel</button>` : '';
+              node.innerHTML = `<div class="product-info"><div style="display:flex; justify-content: space-between; align-items: center;"><div class="product-name">Order: #${o.key.slice(-6)}</div><div class="product-price">₹${o.total.toFixed(2)}</div></div><div class="product-meta">Status: <b>${o.status}</b></div><div class="product-meta">${new Date(o.createdAt).toLocaleString()}</div><div class="product-actions" style="margin-top: 12px;">${detailsBtn}${cancelBtn}</div></div>`;
+              ordersListEl.appendChild(node);
+          });
+      });
+
+      ordersListEl.onclick = (event) => {
+          const target = event.target.closest('button');
+          if (!target) return;
+          const orderKey = target.dataset.key;
+          if (target.classList.contains('btn-order-details')) {
+              db.ref(`orders/${orderKey}`).once('value', snap => {
+                  if (snap.exists()) showPage('orderDetails', { key: orderKey, ...snap.val() });
+              });
+          } else if (target.classList.contains('btn-cancel-order')) {
+              handleOrderCancellation(orderKey);
+          }
+      };
+  }
+
+  function renderOrderDetailPage(order) {
+    if (!order) { DOMElements.orderDetailsSection.innerHTML = '<div class="empty">Order data not found.</div>'; return; }
+    const itemsHTML = order.items.map(item => `<div class="order-summary-item"><span>${item.name} <small>(₹${item.price} x ${item.quantity})</small></span><b>₹${(item.price * item.quantity).toFixed(2)}</b></div>`).join('');
+    DOMElements.orderDetailsSection.innerHTML = `<h3>Order Summary</h3><p><b>Order ID:</b> #${order.key.slice(-6)}<br><b>Date:</b> ${new Date(order.createdAt).toLocaleString()}</p><hr style="border-color: var(--border-color); border-style: dashed;"><h4 class="section-title">Items</h4><div>${itemsHTML}</div><div class="order-summary-total">Total: ₹${order.total.toFixed(2)}</div><hr style="border-color: var(--border-color); border-style: dashed;"><h4 class="section-title">Delivery Address</h4><p><b>${order.userName}</b><br><b>Mobile:</b> ${order.mobileNumber || 'N/A'}<br>${order.address}, ${order.city}, ${order.pincode}</p><button id="back-to-history-btn" class="btn btn-outline" style="width:100%; margin-top: 20px;"><i class="fa-solid fa-arrow-left"></i> Back to Orders</button>`;
+    DOMElements.orderDetailsSection.querySelector('#back-to-history-btn').onclick = () => showPage('history');
+  }
+  
+  // ==================================================
+  // SECTION: REVIEWS & RATINGS
+  // ==================================================
+  async function submitReview(productId) {
+      if (!currentUser) { flashMessage('Please log in to submit a review.', 'error'); showAuthModal('login'); return; }
+      const rating = document.querySelector('input[name="rating"]:checked')?.value;
+      const comment = document.getElementById('review-comment').value.trim();
+      const imageFile = document.getElementById('review-image-upload').files[0];
+      if (!rating) { flashMessage('Please select a rating.', 'error'); return; }
+      if (!comment && !imageFile) { flashMessage('Please add a comment or upload an image.', 'error'); return; }
+
+      const submitBtn = document.getElementById('submit-review-btn');
+      submitBtn.disabled = true; submitBtn.innerText = 'Submitting...';
+      try {
+          let imageUrl = '';
+          if (imageFile) {
+              const snapshot = await storage.ref(`review_images/${productId}/${Date.now()}_${imageFile.name}`).put(imageFile);
+              imageUrl = await snapshot.ref.getDownloadURL();
+          }
+          const reviewData = { userId: currentUser.uid, userName: currentUser.name, rating: parseInt(rating), comment, imageUrl, timestamp: Date.now() };
+          await db.ref(`product_reviews/${productId}`).push(reviewData);
+          flashMessage('Review submitted successfully!', 'success');
+          if (currentProductInModal) { openProductModal(currentProductInModal); }
+      } catch (error) {
+          flashMessage(`Failed to submit review: ${error.message}`, 'error');
+      } finally {
+          submitBtn.disabled = false; submitBtn.innerText = 'Submit Review';
+      }
+  }
+
+  // ==================================================
+  // SECTION: THEME & HELPERS
+  // ==================================================
+  function initializeTheme() {
+    const savedTheme = localStorage.getItem('ef_theme');
+    if (savedTheme === 'dark') {
+      DOMElements.body.classList.add('dark-theme');
+      DOMElements.themeToggle.innerHTML = `<i class="fa-solid fa-sun"></i>`;
+    }
+  }
+
+  function toggleTheme() {
+    const isDark = DOMElements.body.classList.toggle('dark-theme');
+    localStorage.setItem('ef_theme', isDark ? 'dark' : 'light');
+    DOMElements.themeToggle.innerHTML = isDark ? `<i class="fa-solid fa-sun"></i>` : `<i class="fa-solid fa-moon"></i>`;
+  }
+  
+  function capitalize(s){ return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+  
+  // ==================================================
+  // SECTION: START THE APP
+  // ==================================================
+  init();
+
+</script>
+</body>
+</html>
