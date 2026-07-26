@@ -2954,47 +2954,385 @@
             if (modal) modal.classList.add('hidden');
         };
 
-        window.addToCart = () => {
-            if(!window.requireLoginGuard('Cart me Add')) return;
-            if (!selectedProduct) return;
+        // 1. ADD TO CART WITH STOCK LIMIT CHECK
+window.addToCart = () => {
+    if(!window.requireLoginGuard('Cart me Add')) return;
+    if (!selectedProduct) return;
 
-            if (selectedProduct.inStock === false || Number(selectedProduct.quantity) <= 0) {
-                showCustomAlert("Yeh product out of stock hai!", "Out of Stock", "fa-triangle-exclamation");
-                return;
+    const availableStock = Number(selectedProduct.quantity || 0);
+
+    // Out of stock check
+    if (selectedProduct.inStock === false || availableStock <= 0) {
+        showCustomAlert("Yeh product out of stock hai!", "Out of Stock", "fa-triangle-exclamation");
+        return;
+    }
+
+    const hasVariantList = (selectedProduct.variants && selectedProduct.variants.length > 0) || (selectedProduct.sizes && selectedProduct.sizes.length > 0);
+    if (hasVariantList && !selectedVariant) {
+        showCustomAlert("Kripya pehle Size/Color Variant select karein!", "Variant Required", "fa-ruler");
+        return;
+    }
+
+    const variantTitle = selectedVariant ? ` (${selectedVariant.size}${selectedVariant.color ? ' / ' + selectedVariant.color : ''})` : '';
+    const fullName = `${selectedProduct.name}${variantTitle}`;
+
+    const existingItem = cart.find(item => item.id === selectedProduct.key && item.name === fullName);
+    const existingQty = existingItem ? existingItem.qty : 0;
+
+    // Strict Stock Limit Check
+    if (existingQty + 1 > availableStock) {
+        showCustomAlert(`Isse jada order nahi kar sakte! Stock me sirf ${availableStock} Pcs hi bache hain.`, "Stock Limit Exceeded", "fa-box-open");
+        return;
+    }
+
+    if (existingItem) {
+        existingItem.qty += 1;
+    } else {
+        cart.push({
+            id: selectedProduct.key,
+            productId: selectedProduct.key,
+            name: fullName,
+            image: selectedProduct.images ? selectedProduct.images[0] : '',
+            price: selectedPrice,
+            mrp: selectedMrp,
+            variant: selectedVariant,
+            size: selectedVariant ? selectedVariant.size : '',
+            color: selectedVariant ? selectedVariant.color : '',
+            pcs: selectedVariant ? selectedVariant.pcs : 1,
+            qty: 1
+        });
+    }
+
+    updateCartBadge();
+    showCustomAlert(`"${fullName}" added to cart!`, "Item Added", "fa-cart-plus");
+};
+
+// 2. BUY NOW WITH STOCK LIMIT CHECK
+window.handleBuyNow = () => {
+    if(!window.requireLoginGuard('Buy Now')) return;
+    if (!selectedProduct) return;
+
+    const availableStock = Number(selectedProduct.quantity || 0);
+
+    if (selectedProduct.inStock === false || availableStock <= 0) {
+        showCustomAlert("Yeh product out of stock hai!", "Out of Stock", "fa-triangle-exclamation");
+        return;
+    }
+
+    const hasVariantList = (selectedProduct.variants && selectedProduct.variants.length > 0) || (selectedProduct.sizes && selectedProduct.sizes.length > 0);
+    if (hasVariantList && !selectedVariant) {
+        showCustomAlert("Kripya pehle Size/Color Variant select karein!", "Variant Required", "fa-ruler");
+        return;
+    }
+
+    window.isDirectBuyNow = true;
+
+    const variantTitle = selectedVariant ? ` (${selectedVariant.size}${selectedVariant.color ? ' / ' + selectedVariant.color : ''})` : '';
+    const fullName = `${selectedProduct.name}${variantTitle}`;
+
+    window.directBuyNowItem = {
+        id: selectedProduct.key,
+        productId: selectedProduct.key,
+        name: fullName,
+        image: selectedProduct.images ? selectedProduct.images[0] : '',
+        price: selectedPrice,
+        mrp: selectedMrp,
+        variant: selectedVariant,
+        size: selectedVariant ? selectedVariant.size : '',
+        color: selectedVariant ? selectedVariant.color : '',
+        pcs: selectedVariant ? selectedVariant.pcs : 1,
+        qty: 1
+    };
+
+    openSubFullScreen('sub-checkout-flow', 'Checkout');
+    goToStep(1);
+};
+
+// 3. CART QUANTITY INCREMENT WITH STOCK CHECK
+window.updateQty = (idx, amount) => {
+    if (amount > 0) {
+        const item = cart[idx];
+        const liveProduct = localProducts[item.productId || item.id];
+        const availableStock = liveProduct ? Number(liveProduct.quantity || 0) : 0;
+
+        if (item.qty + 1 > availableStock) {
+            showCustomAlert(`Stock me sirf ${availableStock} Pcs bache hain! Utne hi order ho sakte hain.`, "Stock Limit Exceeded", "fa-triangle-exclamation");
+            return;
+        }
+    }
+    cart[idx].qty += amount;
+    if (cart[idx].qty <= 0) cart.splice(idx, 1);
+    updateCartBadge();
+    renderCartList();
+};
+
+// 4. CHECKOUT QUANTITY INCREMENT WITH STOCK CHECK
+window.updateCheckoutQty = (idx, amount) => {
+    if (window.isDirectBuyNow) {
+        if (window.directBuyNowItem) {
+            if (amount > 0) {
+                const liveProduct = localProducts[window.directBuyNowItem.productId || window.directBuyNowItem.id];
+                const availableStock = liveProduct ? Number(liveProduct.quantity || 0) : 0;
+                if (window.directBuyNowItem.qty + 1 > availableStock) {
+                    showCustomAlert(`Stock me sirf ${availableStock} Pcs bache hain!`, "Stock Limit Exceeded", "fa-triangle-exclamation");
+                    return;
+                }
             }
-
-            const hasVariantList = (selectedProduct.variants && selectedProduct.variants.length > 0) || (selectedProduct.sizes && selectedProduct.sizes.length > 0);
-            if (hasVariantList && !selectedVariant) {
-                showCustomAlert("Kripya pehle Size/Color Variant select karein!", "Variant Required", "fa-ruler");
-                return;
+            window.directBuyNowItem.qty += amount;
+            if (window.directBuyNowItem.qty <= 0) window.directBuyNowItem.qty = 1;
+        }
+    } else {
+        if (cart[idx]) {
+            if (amount > 0) {
+                const item = cart[idx];
+                const liveProduct = localProducts[item.productId || item.id];
+                const availableStock = liveProduct ? Number(liveProduct.quantity || 0) : 0;
+                if (item.qty + 1 > availableStock) {
+                    showCustomAlert(`Stock me sirf ${availableStock} Pcs bache hain!`, "Stock Limit Exceeded", "fa-triangle-exclamation");
+                    return;
+                }
             }
-
-            const variantTitle = selectedVariant ? ` (${selectedVariant.size}${selectedVariant.color ? ' / ' + selectedVariant.color : ''})` : '';
-            const fullName = `${selectedProduct.name}${variantTitle}`;
-
-            const existingIndex = cart.findIndex(item => item.id === selectedProduct.key && item.name === fullName);
-
-            if (existingIndex > -1) {
-                cart[existingIndex].qty += 1;
-            } else {
-                cart.push({
-                    id: selectedProduct.key,
-                    productId: selectedProduct.key,
-                    name: fullName,
-                    image: selectedProduct.images ? selectedProduct.images[0] : '',
-                    price: selectedPrice,
-                    mrp: selectedMrp,
-                    variant: selectedVariant,
-                    size: selectedVariant ? selectedVariant.size : '',
-                    color: selectedVariant ? selectedVariant.color : '',
-                    pcs: selectedVariant ? selectedVariant.pcs : 1,
-                    qty: 1
-                });
-            }
-
+            cart[idx].qty += amount;
+            if (cart[idx].qty <= 0) cart.splice(idx, 1);
             updateCartBadge();
-            showCustomAlert(`"${fullName}" added to cart!`, "Item Added", "fa-cart-plus");
-        };
+            renderCartList();
+        }
+    }
+    renderCheckoutSummaryItems();
+};
+
+// 5. ORDER SUBMIT: REALTIME DB DEDUCTION & AUTOMATIC 0 = OUT OF STOCK LOGIC
+window.submitFinalOrder = (mode = 'Online', paymentId = null) => {
+    const itemsToSubmit = window.isDirectBuyNow ? [window.directBuyNowItem] : cart;
+    let subtotal = 0;
+    itemsToSubmit.forEach(item => subtotal += (item.price * item.qty));
+
+    const phone = document.getElementById('cust-phone').value.trim();
+    const custName = document.getElementById('cust-name').value.trim();
+    const payModeRadio = document.querySelector('input[name="pay-mode"]:checked');
+    const payMode = payModeRadio ? payModeRadio.value : 'COD';
+
+    const searchFeeRate = Number(liveCharges.searchFeeRate || 0);
+    const gstRate = Number(liveCharges.gstRate || 0);
+    const packingFee = subtotal > 0 ? Number(liveCharges.packingFee || 0) : 0;
+    const platformFeeAmt = (subtotal * searchFeeRate) / 100;
+    const gstAmt = (platformFeeAmt * gstRate) / 100;
+
+    let codExtraFee = 0;
+    if (payMode === 'COD') {
+        const isFreeCod = subtotal >= (liveCharges.freeShippingMin || 199);
+        if (!isFreeCod) {
+            codExtraFee = Number(liveCharges.codFee || 0);
+        }
+    }
+
+    let grandTotal = Math.max(0, subtotal + platformFeeAmt + gstAmt + packingFee + codExtraFee - discountAmount);
+    grandTotal = Math.round(grandTotal * 100) / 100;
+
+    if(phone) {
+        localStorage.setItem('sasta_bazar_last_phone', phone);
+    }
+
+    const customOrderId = 'BZ-' + Math.floor(100000 + Math.random() * 900000);
+
+    const bld = document.getElementById('cust-building').value;
+    const cty = document.getElementById('cust-city').value;
+    const dst = document.getElementById('cust-district').value;
+    const stt = document.getElementById('cust-state').value;
+    const dtl = document.getElementById('cust-address').value;
+
+    const fullFormattedAddress = `${bld}, ${cty}, ${dst}, ${stt}, ${dtl}`;
+
+    const newOrder = {
+        customOrderId: customOrderId,
+        customerName: custName,
+        customerPhone: phone,
+        customerPincode: document.getElementById('cust-pin').value,
+        customerAddress: fullFormattedAddress,
+        paymentMode: payMode,
+        paymentStatus: (payMode === 'Razorpay' || payMode === 'Online' || mode === 'Razorpay') ? 'PAID' : 'PENDING',
+        razorpayPaymentId: paymentId || 'N/A',
+        appliedCoupon: appliedCouponCode || 'None',
+        discountAmount: discountAmount,
+        cartItems: itemsToSubmit,
+        totalPrice: grandTotal,
+        status: 'PENDING',
+        createdAt: new Date().toISOString()
+    };
+
+    const newOrderRef = push(ordersRef);
+
+    set(newOrderRef, newOrder)
+        .then(() => {
+            // REALTIME DATABASE STOCK DEDUCTION & AUTO OUT OF STOCK LOGIC
+            itemsToSubmit.forEach(item => {
+                const pId = item.productId || item.id;
+                if (pId) {
+                    const prodRef = ref(db, `products/${pId}`);
+                    get(prodRef).then(snap => {
+                        if (snap.exists()) {
+                            const pData = snap.val();
+                            const currQty = Number(pData.quantity || 0);
+                            const boughtQty = Number(item.qty || 1);
+                            const newQty = Math.max(0, currQty - boughtQty);
+                            const inStockStatus = newQty > 0; // 0 hone par automatically false
+
+                            update(prodRef, {
+                                quantity: newQty,
+                                inStock: inStockStatus
+                            });
+                        }
+                    });
+                }
+            });
+
+            completeOrderCheckoutFlow();
+        }).catch(err => showCustomAlert("Order creation error: " + err.message, "Error", "fa-circle-xmark"));
+};
+
+// 6. ORDER HISTORY WITH PRODUCT PHOTO AND DETAILS
+window.loadOrderHistory = () => {
+    const container = document.getElementById('order-history-list');
+    if(!container) return;
+    container.innerHTML = '';
+
+    const userPhone = window.currentUser ? window.currentUser.phone : localStorage.getItem('sasta_bazar_last_phone');
+
+    if (!userPhone) {
+        container.innerHTML = `
+            <div class="bg-white dark:bg-gray-900 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 text-center space-y-3 shadow-sm">
+                <i class="fas fa-user-lock text-4xl text-sasta-PRIMARY"></i>
+                <p class="font-bold text-sm text-gray-800 dark:text-white">Login required to view your orders.</p>
+                <button onclick="openSubFullScreen('sub-login', 'Login')" class="px-5 py-2 bg-sasta-PRIMARY text-white text-xs font-bold rounded-xl shadow">
+                    Login Now
+                </button>
+            </div>
+        `;
+        return;
+    }
+
+    const searchQuery = document.getElementById('order-search-input') ? document.getElementById('order-search-input').value.toLowerCase().trim() : '';
+
+    let matchedKeys = Object.keys(allOrdersData).filter(key => {
+        const o = allOrdersData[key];
+        return o.customerPhone && o.customerPhone.toString().includes(userPhone);
+    });
+
+    if (currentOrderFilterStatus !== 'ALL') {
+        matchedKeys = matchedKeys.filter(key => {
+            const rawSt = (allOrdersData[key].status || '').toLowerCase();
+            if (currentOrderFilterStatus === 'PENDING') return rawSt === 'pending' || rawSt === 'place order';
+            if (currentOrderFilterStatus === 'DELIVERED') return rawSt === 'delivered' || rawSt === 'paid';
+            if (currentOrderFilterStatus === 'CANCELLED') return rawSt === 'cancelled' || rawSt === 'failed';
+            return true;
+        });
+    }
+
+    if (searchQuery) {
+        matchedKeys = matchedKeys.filter(key => {
+            const o = allOrdersData[key];
+            const customId = window.getFormattedOrderId(key, o).toLowerCase();
+            const itemsArr = o.cartItems || o.items || o.products || [];
+            const itemMatch = Array.isArray(itemsArr) && itemsArr.some(i => (i.name || i.title || '').toLowerCase().includes(searchQuery));
+            return customId.includes(searchQuery) || itemMatch || key.toLowerCase().includes(searchQuery);
+        });
+    }
+
+    if (matchedKeys.length === 0) {
+        container.innerHTML = `<p class="text-center text-xs text-gray-400 py-8 font-bold">No orders found for your account.</p>`;
+        return;
+    }
+
+    matchedKeys.reverse().forEach(key => {
+        const o = allOrdersData[key];
+        const card = document.createElement('div');
+        card.className = "bg-white dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-800 space-y-3 shadow-sm text-xs text-gray-800 dark:text-white cursor-pointer transition hover:border-sasta-PRIMARY";
+        card.onclick = () => window.openOrderDetailsFullScreen(key);
+
+        const formattedOrderId = window.getFormattedOrderId(key, o);
+
+        const rawSt = (o.status || 'Pending').toLowerCase();
+        let displayStatusTag = (o.status || 'Pending').toUpperCase();
+        let statusBadgeClass = "bg-orange-100 text-orange-700";
+
+        if (rawSt === 'pending' || rawSt === 'place order') {
+            displayStatusTag = "PLACE ORDER";
+            statusBadgeClass = "bg-yellow-100 text-yellow-700";
+        } else if (rawSt === 'cancelled' || rawSt === 'failed') {
+            displayStatusTag = "CANCELLED";
+            statusBadgeClass = "bg-red-100 text-red-700";
+        } else if (rawSt === 'paid' || rawSt === 'delivered') {
+            displayStatusTag = "DELIVERED";
+            statusBadgeClass = "bg-green-100 text-green-700";
+        }
+
+        const payBadge = window.getPaymentModeBadge(o);
+
+        // PRODUCT PHOTO WITH DETAILS FOR ORDER HISTORY CARD
+        let itemsHtml = '';
+        const itemsArr = o.cartItems || o.items || o.products || [];
+        if (Array.isArray(itemsArr) && itemsArr.length > 0) {
+            itemsHtml = '<div class="space-y-2 pt-1 border-t dark:border-gray-800">';
+            itemsArr.forEach(item => {
+                const img = item.image || item.photo || (item.images ? item.images[0] : '') || 'https://via.placeholder.com/60';
+                itemsHtml += `
+                    <div class="flex items-center space-x-3 bg-gray-50 dark:bg-gray-800/60 p-2 rounded-lg border border-gray-100 dark:border-gray-700">
+                        <img src="${img}" class="w-12 h-12 object-contain rounded-md bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shrink-0">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold truncate text-xs text-gray-900 dark:text-white">${item.name || 'Product'}</p>
+                            <div class="flex items-center justify-between text-[11px] text-gray-500 mt-0.5">
+                                <span class="font-semibold">Qty: <strong class="text-gray-800 dark:text-gray-200">${item.qty || item.quantity || 1}</strong></span>
+                                <span class="font-extrabold text-sasta-PRIMARY">₹${item.price}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            itemsHtml += '</div>';
+        }
+
+        card.innerHTML = `
+            <div class="flex justify-between items-center border-b dark:border-gray-800 pb-2">
+                <div>
+                    <span class="font-black text-xs text-sasta-PRIMARY">Order #${formattedOrderId}</span>
+                    <span class="text-[9px] text-gray-400 block font-medium"><i class="far fa-clock mr-1"></i>${window.formatOrderDateTime(o.createdAt)}</span>
+                </div>
+                <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase ${statusBadgeClass}">
+                    ${displayStatusTag}
+                </span>
+            </div>
+
+            ${itemsHtml}
+
+            <div class="flex justify-between items-center text-[11px] pt-1">
+                <span class="text-gray-400 font-bold">Total Amount: <strong class="text-gray-900 dark:text-white font-black text-xs">₹${o.totalPrice || 0}</strong></span>
+                <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase ${payBadge.class}">${payBadge.text}</span>
+            </div>
+
+            <div class="flex space-x-1.5 pt-1" onclick="event.stopPropagation()">
+                ${(rawSt === 'pending' || rawSt === 'place order' || rawSt === 'awaiting payment') ? `
+                    <button onclick="cancelOrder('${key}')" class="flex-1 py-1.5 bg-red-600 text-white rounded-lg font-bold text-[10px] shadow">
+                        Cancel Order
+                    </button>
+                ` : ''}
+
+                ${(rawSt === 'delivered' || rawSt === 'paid') ? `
+                    <button onclick="requestReturnItem('${key}')" class="flex-1 py-1.5 bg-sasta-PRIMARY text-white rounded-lg font-bold text-[10px] shadow">
+                        Return Item
+                    </button>
+                    <button onclick="requestExchangeItem('${key}')" class="flex-1 py-1.5 bg-purple-600 text-white rounded-lg font-bold text-[10px] shadow">
+                        Exchange Item
+                    </button>
+                ` : ''}
+
+                <button onclick="openOrderDetailsFullScreen('${key}')" class="flex-1 py-1.5 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded-lg font-bold text-[10px] border dark:border-gray-700 flex items-center justify-center gap-0.5">
+                    Full Details <i class="fas fa-chevron-right text-[8px]"></i>
+                </button>
+            </div>
+        `;
+        container.appendChild(card);
+    });
+};
 
         window.handleBuyNow = () => {
             if(!window.requireLoginGuard('Buy Now')) return;
